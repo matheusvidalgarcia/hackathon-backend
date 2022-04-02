@@ -51,6 +51,9 @@ on:
 
 env:
   PROJECT_ID: hackathon-6aso-grupo04 # TODO: update Google Cloud project id
+  GAR_LOCATION: ${{ secrets.GAR_LOCATION }} # TODO: update Artifact Registry location
+  SERVICE: ${{ secrets.SERVICE }} # TODO: update Cloud Run service name
+  REGION: ${{ secrets.REGION }} # TODO: update Cloud Run service region
 
 jobs:
   deploy:
@@ -71,20 +74,17 @@ jobs:
         with:
            credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-      - name: Docker Auth
-        id: docker-auth
-        uses: 'docker/login-action@v1'
-        with:
-          username: 'oauth2accesstoken'
-          password: '${{ steps.auth.outputs.access_token }}'
-          registry: '${{ secrets.GAR_LOCATION }}-docker.pkg.dev'
+      - name: Docker Login
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+        run: | 
+          echo '${{ secrets.GCP_CREDENTIALS }}' > key.json
+          cat key.json | docker login -u _json_key --password-stdin https://us-central1-docker.pkg.dev/          
 
       - name: Build and Push Container
         run: |-
           docker build -t "${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.SERVICE }}:${{ github.sha }}" ./
           docker push "${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.SERVICE }}:${{ github.sha }}"
-
-      # END - Docker auth and build
 
       - name: Deploy to Cloud Run
         id: deploy
